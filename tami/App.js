@@ -27,7 +27,8 @@ const styles = StyleSheet.create({
 		fontSize: 25,
 		marginVertical: 10,
 		marginHorizontal: 20,
-		color: 'black'
+		color: 'black',
+		fontFamily: 'Pretendard-Regular'
 	}
 })
 
