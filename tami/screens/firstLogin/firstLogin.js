@@ -139,7 +139,6 @@ const styles = StyleSheet.create({
     buttonText: {
     color: '#ffffff', // Figma 버튼 텍스트 색상
     fontSize: 18,
-    fontWeight: 'bold',
     fontFamily: 'Pretendard-Regular'
     },
 });

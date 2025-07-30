@@ -1,17 +1,16 @@
 import React from 'react';
 import {
-    StyleSheet,
-    View,
-    Text,
-    Image,
-    TextInput,
-    TouchableOpacity,
-    SafeAreaView,
-    StatusBar,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Linking
+  StyleSheet,
+  View,
+  Text,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 
 // 새로 제공된 SNS 로고 이미지들을 불러옵니다.
