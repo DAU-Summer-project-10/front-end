@@ -14,8 +14,8 @@ import {
 const { width, height } = Dimensions.get('window');
 
 // 이미지 파일을 불러옵니다.
-const tamiImage = require('./assets/Images/tami.png');
-const ellipseImage = require('./assets/Images/Ellipse138.png');
+const tamiImage = require('../../assets/Images/tami.png');
+const ellipseImage = require('../../assets/Images/Ellipse138.png');
 
 const FirstLoginScreen = () => {
     return (

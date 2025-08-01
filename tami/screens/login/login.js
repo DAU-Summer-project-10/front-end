@@ -1,24 +1,25 @@
 import React from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  Image,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+    StyleSheet,
+    View,
+    Text,
+    Image,
+    TextInput,
+    TouchableOpacity,
+    SafeAreaView,
+    StatusBar,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Linking
 } from 'react-native';
 
-// 새로 제공된 SNS 로고 이미지들을 불러옵니다.
-const kakaoLogo = require('./assets/Images/kakaoLogo.png');
-const naverLogo = require('./assets/Images/naverLogo.png');
-const facebookLogo = require('./assets/Images/facebookLogo.png');
-const googleLogo = require('./assets/Images/googleLogo.png');
-const appleLogo = require('./assets/Images/appleLogo.png');
+// SNS 로고 이미지들
+const kakaoLogo = require('../../assets/Images/kakaoLogo.png');
+const naverLogo = require('../../assets/Images/naverLogo.png');
+const facebookLogo = require('../../assets/Images/facebookLogo.png');
+const googleLogo = require('../../assets/Images/googleLogo.png');
+const appleLogo = require('../../assets/Images/appleLogo.png');
 
 const LoginScreen = () => {
     return (
