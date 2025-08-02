@@ -9,6 +9,8 @@ import {
     StatusBar,
     Dimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 // 화면 크기를 가져옵니다.
 const { width, height } = Dimensions.get('window');
@@ -17,7 +19,20 @@ const { width, height } = Dimensions.get('window');
 const tamiImage = require('../../assets/Images/tami.png');
 const ellipseImage = require('../../assets/Images/Ellipse138.png');
 
-const FirstLoginScreen = () => {
+const FirstLoginScreen = ({ navigation }) => {
+    const handleStart = async () => {
+        try {
+            // 1. AsyncStorage에 'hasLaunched'라는 키로 'true' 값을 저장합니다.
+            await AsyncStorage.setItem("hasLaunched", "true")
+            // 2. 'Login' 화면으로 이동합니다. (replace를 사용해 뒤로가기 방지)
+            navigation.replace("Login")
+        } catch (error) {
+            console.error("AsyncStorage 에러:", error)
+        }
+    }
+
+    
+    
     return (
     // SafeAreaView는 노치나 하단 바 등 시스템 UI를 피해서 콘텐츠를 표시합니다.
         <SafeAreaView style={styles.safeArea}>
@@ -45,7 +60,7 @@ const FirstLoginScreen = () => {
                 </View>
 
         {/* 하단 '시작하기' 버튼 */}
-                <TouchableOpacity style={styles.button} activeOpacity={0.8}>
+                <TouchableOpacity style={styles.button} activeOpacity={0.8} onPress={handleStart}>
                     <Text style={styles.buttonText}>시작하기!</Text>
                 </TouchableOpacity>
             </View>
