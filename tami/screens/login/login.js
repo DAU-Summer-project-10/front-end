@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     StyleSheet,
     View,
@@ -11,8 +11,13 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Linking
+    Linking,
+    Alert,
+    ActivityIndicator
 } from 'react-native';
+
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // SNS 로고 이미지들
 const kakaoLogo = require('../../assets/Images/kakaoLogo.png');
@@ -21,8 +26,66 @@ const facebookLogo = require('../../assets/Images/facebookLogo.png');
 const googleLogo = require('../../assets/Images/googleLogo.png');
 const appleLogo = require('../../assets/Images/appleLogo.png');
 
-const LoginScreen = () => {
-    return (
+const developmentAlert = () => {
+  Alert.alert(
+    "SNS 계정으로 로그인",
+    "개발 중 입니다!"
+    [
+      {text: '확인', onPress:() => console.log('SNS알림 - 확인 버튼 누름')}
+    ]
+  )
+}
+
+const LoginScreen = ({ navigation }) => {
+  // --- 1. 사용자 입력을 기억하기 위한 '기억 상자'(State) ---
+  const [userId, setUserId] = useState(''); // 아이디 입력값을 기억할 상자
+  const [password, setPassword] = useState(''); // 비밀번호 입력값을 기억할 상자
+  const [loading, setLoading] = useState(false); // 로딩 중인지 아닌지 기억할 상자
+
+  // --- 2. '로그인' 버튼을 눌렀을 때 실행될 모든 로직 ---
+  const handleLogin = async () => {
+    // 입력값 검사
+    if (!userId || !password) {
+      Alert.alert('알림', '아이디와 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+
+    setLoading(true); // "지금 로딩 중!"으로 상태 변경
+
+    try {
+      // --- 3. 서버에 "이 사람 회원 맞나요?"라고 물어보기 ---
+      const response = await axios.post('http://10.0.2.2:8080/api/users/login', {
+        userId: userId,
+        password: password,
+      });
+
+      // --- 4. 서버가 "성공!"이라고 답변했을 때 ---
+      if (response.status === 200) {
+        console.log('로그인 성공'); // 콘솔에 성공 메시지 출력
+
+        // 서버가 보내준 사용자 정보를 'userData' 변수에 저장
+        const userData = response.data;
+        
+        // --- 5. 사용자 정보를 AsyncStorage에 저장하기 ---
+        // AsyncStorage는 문자열만 저장할 수 있으므로, 객체를 JSON 문자열로 변환합니다.
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        console.log('사용자 정보 저장 완료:', userData);
+
+        // 로그인 성공 알림 후 메인 화면으로 이동
+        Alert.alert('로그인 성공', `${userData.userName}님 환영합니다!`);
+        navigation.replace('Main'); // 'Main'은 탭 네비게이터가 있는 화면의 이름
+      }
+    } catch (error) {
+      // --- 4. 서버가 "실패!"라고 답변했을 때 ---
+      console.error('로그인 에러:', error);
+      Alert.alert('로그인 실패', '아이디 또는 비밀번호가 일치하지 않습니다.');
+    } finally {
+      // --- 모든 과정이 끝나면 반드시 실행 ---
+      setLoading(false); // "로딩 끝!"으로 상태 변경
+    }
+  };
+  
+  return (
     <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" />
         <KeyboardAvoidingView
@@ -52,10 +115,32 @@ const LoginScreen = () => {
           {/* 중간 영역: 로그인 폼과 링크 */}
                 <View>
                     <View style={styles.inputContainer}>
-                        <TextInput style={styles.input} placeholder="아이디 입력" placeholderTextColor="#A5A5A5"/>
-                        <TextInput style={styles.input} placeholder="비밀번호 입력" placeholderTextColor="#A5A5A5" secureTextEntry/>
-                        <TouchableOpacity style={styles.loginButton}>
+                        {/* 아이디 입력: 글자가 바뀔 때마다 'userId' 기억 상자의 내용을 업데이트 */}
+                        <TextInput style={styles.input}
+                          placeholder="아이디 입력"
+                          placeholderTextColor="#A5A5A5"
+                          value={userId}
+                          onChangeText={setUserId}
+                          autoCapitalize="none"
+                        />
+                        <TextInput style={styles.input}
+                          placeholder="비밀번호 입력"
+                          placeholderTextColor="#A5A5A5"
+                          secureTextEntry
+                          value={password}
+                          onChangeText={setPassword}
+                        />
+
+                        {/*로그인 버튼 */}
+                        <TouchableOpacity style={styles.loginButton}
+                          onPress={handleLogin}
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <ActivityIndicator color="#FFFFFF" /> // 로딩 아이콘
+                          ) : (
                             <Text style={styles.loginButtonText}>로그인</Text>
+                          )}
                         </TouchableOpacity>
                     </View>
                     
@@ -83,19 +168,19 @@ const LoginScreen = () => {
                     <View style={styles.divider} />
                 </View>
                 <View style={styles.socialLogosContainer}>
-                    <TouchableOpacity style={styles.socialLogoWrapper}>
+                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
                         <Image source={kakaoLogo} style={styles.socialLogo} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper}>
+                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
                         <Image source={naverLogo} style={styles.socialLogo} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper}>
+                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
                         <Image source={facebookLogo} style={styles.socialLogo} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper}>
+                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
                         <Image source={googleLogo} style={styles.socialLogo} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper}>
+                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
                         <Image source={appleLogo} style={styles.socialLogo} />
                     </TouchableOpacity>
                 </View>
