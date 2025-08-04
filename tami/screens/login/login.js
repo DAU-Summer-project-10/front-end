@@ -29,7 +29,7 @@ const appleLogo = require('../../assets/Images/appleLogo.png');
 const developmentAlert = () => {
   Alert.alert(
     "SNS 계정으로 로그인",
-    "개발 중 입니다!"
+    "개발 중 입니다!",
     [
       {text: '확인', onPress:() => console.log('SNS알림 - 확인 버튼 누름')}
     ]
@@ -54,7 +54,7 @@ const LoginScreen = ({ navigation }) => {
 
     try {
       // --- 3. 서버에 "이 사람 회원 맞나요?"라고 물어보기 ---
-      const response = await axios.post('http://10.0.2.2:8080/api/users/login', {
+      const response = await axios.post('http://10.0.2.2:8080/user/login', {
         userId: userId,
         password: password,
       });
@@ -72,7 +72,7 @@ const LoginScreen = ({ navigation }) => {
         console.log('사용자 정보 저장 완료:', userData);
 
         // 로그인 성공 알림 후 메인 화면으로 이동
-        Alert.alert('로그인 성공', `${userData.userName}님 환영합니다!`);
+        Alert.alert('로그인 성공', `admin님 환영합니다!`);
         navigation.replace('Main'); // 'Main'은 탭 네비게이터가 있는 화면의 이름
       }
     } catch (error) {
@@ -99,7 +99,10 @@ const LoginScreen = ({ navigation }) => {
             >
           {/* 상단 영역: 뒤로가기 버튼과 환영 메시지 */}
                 <View>
-                    <TouchableOpacity style={styles.backButton}>
+                    <TouchableOpacity
+                      style={styles.backButton}
+                      onPress={() => navigation.navigate('FirstLogin')}
+                    >
                         <Text style={styles.backButtonText}>{'<'}</Text>
                     </TouchableOpacity>
 

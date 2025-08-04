@@ -17,11 +17,10 @@ const bagIcon = require('../assets/Images/Navigator/Bag.png');
 const tabBarBackground = require('../assets/Images/Navigator/Rectangle.png');
 
 import test1Screen from './test1'
-import test2Screen from './test2'
 import test3Screen from './test3'
 import test4Screen from './test4'
 import test5Screen from './test5'
-
+import CalendarScreen from './CalendarScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -91,7 +90,7 @@ const BottomTabNavigator = () => {
             initialRouteName="Home" // 메인을 홈탭으로 설정..
         >
             <Tab.Screen name="Chart" component={test1Screen} />
-            <Tab.Screen name="Calendar" component={test2Screen} />
+            <Tab.Screen name="Calendar" component={CalendarScreen} />
             <Tab.Screen name="Home" component={test3Screen} />
             <Tab.Screen name="Users" component={test4Screen} />
             <Tab.Screen name="Bag" component={test5Screen} />
