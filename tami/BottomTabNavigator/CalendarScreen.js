@@ -1,160 +1,371 @@
-"use client"
+'use client';
 
-import { useState, useMemo } from "react"
-import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from "react-native"
-import { Calendar } from "react-native-calendars"
-import { Plus } from "lucide-react-native"
+import { useState, useMemo, useCallback } from 'react';
+import {
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  FlatList,
+  Image,
+} from 'react-native';
+import { Calendar } from 'react-native-calendars';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Trash2 } from 'lucide-react-native';
 
-const leftArrow = require("../assets/Images/Calendar/leftArrow.png")
-const rightArrow = require("../assets/Images/Calendar/rightArrow.png")
-const lineSeparator = require("../assets/Images/Calendar/line.png")
-const addLogo = require('../assets/Images/Calendar/addLogo.png')
+// 이미지 파일들
+const leftArrowImage = require('../assets/Images/Calendar/leftArrow.png');
+const rightArrowImage = require('../assets/Images/Calendar/rightArrow.png');
+const addLogoImage = require('../assets/Images/Calendar/addLogo.png');
+const lineImage = require('../assets/Images/Calendar/line.png');
 
-// 오늘 날짜를 'YYYY-MM-DD' 형식의 문자열로 가져오는 함수
-const getTodayDateString = () => {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = (today.getMonth() + 1).toString().padStart(2, "0")
-    const day = today.getDate().toString().padStart(2, "0")
-    return `${year}-${month}-${day}`
-}
+const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
 const CalendarScreen = () => {
-  // 선택된 날짜를 저장하기 위한 state 추가 ---
-  // 초기값으로 당일 날짜 설정
-    const [selectedDate, setSelectedDate] = useState(getTodayDateString())
+  const navigation = useNavigation();
+  const [selectedDate, setSelectedDate] = useState(getTodayDateString());
+  const [schedules, setSchedules] = useState([]);
+  const [scheduleColors, setScheduleColors] = useState({}); // 색상 정보 저장
+  const [isLoading, setIsLoading] = useState(true);
 
-    const renderCustomHeader = (date) => {
-        const header = date.toString("yyyy MMMM")
-        const [year, month] = header.split(" ")
-        return (
-            <View style={styles.customHeaderContainer}>
-                <Text style={styles.headerYear}>{year}</Text>
-                <Text style={styles.headerMonth}>{month}</Text>
-            </View>
-        )
+  // 로컬에 저장된 색상 정보를 불러오는 함수
+  const loadScheduleColors = async () => {
+    try {
+      const colorData = await AsyncStorage.getItem('scheduleColors');
+      if (colorData) {
+        setScheduleColors(JSON.parse(colorData));
+      }
+    } catch (error) {
+      console.error('색상 정보 로드 오류:', error);
     }
+  };
 
-  // 선택된 날짜에 따라 markedDates 객체를 동적으로 생성 ---
-    const markedDates = useMemo(() => {
-        if (!selectedDate) return {}
-        return {
-            [selectedDate]: {
-                selected: true,
-                // disableTouchEvent: true, // 이 옵션을 사용하면 선택된 날짜 재선택 방지 가능
-                selectedColor: "#1485f7ff", // 피그마 디자인의 강조 색상으로 변경
-                selectedTextColor: "#222B45",
-            },
-        }
-    }, [selectedDate])
+  const fetchSchedules = async () => {
+    try {
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      if (!userInfoString) {
+        navigation.navigate('Login');
+        return;
+      }
+      const userInfo = JSON.parse(userInfoString);
 
+      const response = await fetch(
+        `http://10.0.2.2:8082/user/getAllUserInfo/${userInfo.id}`,
+      );
+      const data = await response.json();
+      setSchedules(data.schedules || []);
+
+      // 색상 정보도 함께 로드
+      await loadScheduleColors();
+    } catch (error) {
+      Alert.alert('오류', '일정 정보를 가져오는데 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteSchedule = scheduleId => {
+    Alert.alert('일정 삭제', '정말로 이 일정을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        onPress: async () => {
+          try {
+            const response = await fetch(
+              `http://10.0.2.2:8082/user/deleteSchedule/${scheduleId}`,
+              {
+                method: 'DELETE',
+              },
+            );
+            if (response.ok) {
+              const updatedColors = { ...scheduleColors };
+              delete updatedColors[scheduleId];
+              setScheduleColors(updatedColors);
+              await AsyncStorage.setItem(
+                'scheduleColors',
+                JSON.stringify(updatedColors),
+              );
+
+              Alert.alert('성공', '일정이 삭제되었습니다.');
+              fetchSchedules();
+            } else {
+              Alert.alert('오류', '일정 삭제에 실패했습니다.');
+            }
+          } catch (error) {
+            Alert.alert('오류', '네트워크 또는 서버에 문제가 발생했습니다.');
+          }
+        },
+        style: 'destructive',
+      },
+    ]);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsLoading(true);
+      fetchSchedules();
+    }, []),
+  );
+
+  // ★★★ 로컬 색상 정보를 사용해서 캘린더 점 표시 ★★★
+  const markedDates = useMemo(() => {
+    const dotsByDate = schedules.reduce((acc, schedule) => {
+      if (!acc[schedule.date]) acc[schedule.date] = { dots: [] };
+
+      // 로컬에 저장된 색상 정보가 있으면 사용, 없으면 기본 색상
+      const color = scheduleColors[schedule.id]?.color || '#409EFF';
+      acc[schedule.date].dots.push({ color: color, key: schedule.id });
+      return acc;
+    }, {});
+
+    if (selectedDate) {
+      dotsByDate[selectedDate] = {
+        ...dotsByDate[selectedDate],
+        selected: true,
+        selectedColor: '#0080FF',
+        selectedTextColor: '#FFFFFF',
+      };
+    }
+    return dotsByDate;
+  }, [schedules, scheduleColors, selectedDate]);
+
+  const selectedDateSchedules = useMemo(
+    () => schedules.filter(s => s.date === selectedDate),
+    [schedules, selectedDate],
+  );
+
+  const renderCustomHeader = date => {
+    const month = date.toString('MMMM');
+    const year = date.toString('yyyy');
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.headerTitle}>캘린더</Text>
+      <View style={styles.customHeaderContainer}>
+        <Text style={styles.headerYear}>{year}</Text>
+        <Text style={styles.headerMonth}>{month}</Text>
+      </View>
+    );
+  };
 
-                <Calendar
-                    markedDates={markedDates}
-                    onDayPress={(day) => {
-                        setSelectedDate(day.dateString)
-                    }}
-                    renderArrow={(direction) =>
-                        direction === "left" ? (
-                            <Image source={leftArrow} style={styles.arrowImage} />
-                        ) : (
-                            <Image source={rightArrow} style={styles.arrowImage} />
-                        )
-                    }
-                    renderHeader={renderCustomHeader}
-                    monthFormat={"yyyy MMMM"}
-                    theme={{
-                        backgroundColor: "#F2F7FE",
-                        calendarBackground: "#F2F7FE",
-                        textSectionTitleColor: "#8F9BB3",
-                        todayTextColor: "#0080FF",
-                        dayTextColor: "#222B45",
-                        textDisabledColor: "#CED3DE",
-                        monthTextColor: "#222B45",
-                        textDayFontFamily: 'Pretendard-Regular',
-                        textDayFontSize: 15,
-                        textMonthFontSize: 28,
-                        textDayHeaderFontSize: 14,
-                        "stylesheet.calendar.header": {
-                            week: {
-                                marginTop: 15,
-                                flexDirection: "row",
-                                justifyContent: "space-around",
-                            },
-                        },
-            // --- 수정사항 2-4: 선택된 날짜의 배경을 원에서 네모로 변경 ---
-                        "stylesheet.day.basic": {
-                            selected: {
-                                backgroundColor: "#ADDEFF", // 테마 색상과 일치
-                                borderRadius: 8, // 0으로 하면 직각, 숫자를 주면 둥근 사각형
-                            },
-                        },
-                    }}
-                    style={styles.calendar}
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>캘린더</Text>
+      </View>
+
+      <Calendar
+        markedDates={markedDates}
+        markingType={'multi-dot'}
+        onDayPress={day => setSelectedDate(day.dateString)}
+        renderHeader={renderCustomHeader}
+        renderArrow={direction => (
+          <TouchableOpacity style={styles.arrowContainer}>
+            <Image
+              source={direction === 'left' ? leftArrowImage : rightArrowImage}
+              style={styles.arrowImage}
+            />
+          </TouchableOpacity>
+        )}
+        monthFormat={'yyyy MMMM'}
+        theme={{
+          backgroundColor: '#F2F7FE',
+          calendarBackground: '#F2F7FE',
+          textSectionTitleColor: '#8F9BB3',
+          textDayFontFamily: 'Pretendard-Regular',
+          todayTextColor: '#0080FF',
+          dayTextColor: '#222B45',
+          textDisabledColor: '#CED3DE',
+          selectedDayTextColor: '#FFFFFF',
+          selectedDayBackgroundColor: '#0080FF',
+          'stylesheet.day.basic': {
+            selected: {
+              backgroundColor: '#0080FF',
+              borderRadius: 8,
+            },
+          },
+        }}
+        style={styles.calendar}
+      />
+
+      <View style={styles.dividerContainer}>
+        <Image source={lineImage} style={styles.dividerLine} />
+      </View>
+
+      <View style={styles.listContainer}>
+        <View style={styles.listHeader}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() =>
+              navigation.navigate('AddSchedule', { initialDate: selectedDate })
+            }
+          >
+            <Text style={styles.addButtonText}>추가하기</Text>
+            <Image source={addLogoImage} style={styles.addIcon} />
+          </TouchableOpacity>
+        </View>
+        {isLoading ? (
+          <ActivityIndicator style={{ marginTop: 20 }} />
+        ) : (
+          <FlatList
+            data={selectedDateSchedules}
+            keyExtractor={item => item.id.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.scheduleItem}>
+                <View
+                  style={[
+                    styles.scheduleColorBar,
+                    {
+                      backgroundColor:
+                        scheduleColors[item.id]?.color || '#409EFF',
+                    },
+                  ]}
                 />
-
-                <Image source={lineSeparator} style={styles.separator} />
-
-                <View style={styles.todoSection}>
-                    <TouchableOpacity style={styles.addButton}>
-                        <Text style={styles.addButtonText}>추가하기</Text>
-                        <Image style={styles.addLogo} source={addLogo} />
-                    </TouchableOpacity>
-
-                    <View style={styles.wipCard}>
-                        <Text style={styles.wipText}>체크리스트 기능 개발중...</Text>
-                    </View>
+                <View style={styles.scheduleContentContainer}>
+                  <Text style={styles.scheduleContent}>{item.content}</Text>
                 </View>
-            </ScrollView>
-        </SafeAreaView>
-    )
-}
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteSchedule(item.id)}
+                >
+                  <Trash2 size={20} color="#FF3D71" />
+                </TouchableOpacity>
+              </View>
+            )}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>등록된 일정이 없습니다.</Text>
+            }
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          />
+        )}
+      </View>
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: "#F2F7FE" },
-    container: { paddingBottom: 100 },
-    headerTitle: { fontSize: 22, fontFamily: 'Pretendard-Bold', textAlign: "center", marginVertical: 20, color: "#222B45" },
-    calendar: { marginHorizontal: 20 },
-    customHeaderContainer: { alignItems: "center", padding: 10 },
-    headerYear: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: "#8F9BB3" },
-    headerMonth: { fontSize: 28, fontFamily: 'Pretendard-Bold', color: "#222B45", marginTop: 4 },
-    arrowImage: {
-        width: 40,
-        height: 40,
-        resizeMode: "contain",
-    },
-    separator: {
-        width: "8%",
-        height: 20,
-        resizeMode: "contain",
-        alignSelf: "center",
-        marginVertical: 10,
-    },
-    todoSection: { marginTop: 10, paddingHorizontal: 20 },
-    addButton: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginBottom: 10 },
-    addButtonText: { color: "black", fontFamily: 'Pretendard-Bold', marginRight: 5 },
-    addLogo: {width: 17, height: 17},
-    wipCard: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 40,
-        alignItems: "center",
-        justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    wipText: {
-        fontSize: 16,
-        color: "#8F9BB3",
-        fontFamily: 'Pretendard-Regular'
-    },
-})
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F2F7FE',
+  },
+  header: {
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'Pretendard-Bold',
+    color: '#222B45',
+  },
+  calendar: {
+    marginHorizontal: 10,
+  },
+  customHeaderContainer: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  headerYear: {
+    fontSize: 16,
+    fontFamily: 'Pretendard-Regular',
+    color: '#8F9BB3',
+  },
+  headerMonth: {
+    fontSize: 32,
+    fontFamily: 'Pretendard-Bold',
+    color: '#222B45',
+    marginTop: 2,
+  },
+  arrowContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrowImage: {
+    width: 35,
+    height: 35,
+    resizeMode: 'contain',
+  },
 
-export default CalendarScreen
+  dividerContainer: {
+    alignItems: 'center',
+    marginVertical: 15,
+  },
+  dividerLine: {
+    width: '10%',
+    height: 2,
+    resizeMode: 'stretch',
+    get resizeMode() {
+      return this._resizeMode;
+    },
+    set resizeMode(value) {
+      this._resizeMode = value;
+    },
+  },
+  listContainer: {
+    flex: 1,
+    backgroundColor: '#F2F7FE',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  listTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222B45',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addButtonText: {
+    color: 'black',
+    fontFamily: 'Pretendard-Bold',
+  },
+  addIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
+  scheduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  scheduleColorBar: {
+    width: 8,
+    height: '100%',
+  },
+  scheduleContentContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  scheduleContent: {
+    fontSize: 16,
+    color: '#222B45',
+  },
+  deleteButton: {
+    padding: 20,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontFamily: 'Pretendard-Regular',
+    marginTop: 30,
+    color: '#8F9BB3',
+  },
+});
+
+export default CalendarScreen;

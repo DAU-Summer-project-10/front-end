@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import {
-    StyleSheet,
-    View,
-    Text,
-    Image,
-    TextInput,
-    TouchableOpacity,
-    SafeAreaView,
-    StatusBar,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Linking,
-    Alert,
-    ActivityIndicator
-} from 'react-native';
+'use client';
 
+import { useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -27,171 +27,265 @@ const googleLogo = require('../../assets/Images/googleLogo.png');
 const appleLogo = require('../../assets/Images/appleLogo.png');
 
 const developmentAlert = () => {
-  Alert.alert(
-    "SNS 계정으로 로그인",
-    "개발 중 입니다!",
-    [
-      {text: '확인', onPress:() => console.log('SNS알림 - 확인 버튼 누름')}
-    ]
-  )
-}
+  Alert.alert('SNS 계정으로 로그인', '개발 중 입니다!', [
+    { text: '확인', onPress: () => console.log('SNS알림 - 확인 버튼 누름') },
+  ]);
+};
 
 const LoginScreen = ({ navigation }) => {
-  // --- 1. 사용자 입력을 기억하기 위한 '기억 상자'(State) ---
-  const [userId, setUserId] = useState(''); // 아이디 입력값을 기억할 상자
-  const [password, setPassword] = useState(''); // 비밀번호 입력값을 기억할 상자
-  const [loading, setLoading] = useState(false); // 로딩 중인지 아닌지 기억할 상자
+  // 하 진짜 자살마렵네 걍 Tlqkf!!!!!!!!!!
 
-  // --- 2. '로그인' 버튼을 눌렀을 때 실행될 모든 로직 ---
+  const [userId, setUserId] = useState(''); // 아이디 입력값을 기억
+  const [password, setPassword] = useState(''); // 비밀번호 입력값을 기억
+  const [loading, setLoading] = useState(false); // 로딩 중인지 아닌지 기억
+
+  //로그인 버튼을 눌렀을 때 실행될거
   const handleLogin = async () => {
+    // handleLogin 함수 맨 앞에 추가 임시 mock 용이라는데 모르겟음 일단 해
+    if (userId === 'admin' && password === 'admin') {
+      const mockUserInfo = {
+        id: 1,
+        loginId: 'admin',
+        name: '관리자',
+        originalData: { id: 1, loginId: 'admin', name: '관리자' },
+      };
+
+      await AsyncStorage.setItem('userInfo', JSON.stringify(mockUserInfo));
+      Alert.alert('로그인 성공 (임시)', `${mockUserInfo.name}님 환영합니다!`);
+      navigation.replace('Main');
+      return;
+    }
+    // ★★★ 함수 시작 확인 ★★★
+    console.log('★★★ handleLogin 함수 시작!');
+    Alert.alert('디버그', 'handleLogin 함수가 시작되었습니다!');
+
     // 입력값 검사
     if (!userId || !password) {
+      console.log('★★★ 입력값 없음 - userId:', userId, 'password:', password);
       Alert.alert('알림', '아이디와 비밀번호를 모두 입력해주세요.');
       return;
     }
 
+    console.log(
+      '★★★ 입력값 확인 완료 - userId:',
+      userId,
+      'password:',
+      password,
+    );
+    console.log('★★★ 비밀번호 길이:', password.length);
     setLoading(true); // "지금 로딩 중!"으로 상태 변경
 
     try {
-      // --- 3. 서버에 "이 사람 회원 맞나요?"라고 물어보기 ---
+      console.log('★★★ 서버 요청 시작...');
+      Alert.alert('디버그', '서버에 요청을 보냅니다...');
+
+      console.log(
+        '★★★ 서버로 보낼 데이터:',
+        JSON.stringify(
+          {
+            id: userId,
+            pw: password,
+          },
+          null,
+          2,
+        ),
+      );
+
+      // 서버에 "이 사람 회원 맞나요?"라고 물어보기 ---
       const response = await axios.post('http://10.0.2.2:8080/user/login', {
-        userId: userId,
-        password: password,
+        id: userId,
+        pw: password,
       });
 
-      // --- 4. 서버가 "성공!"이라고 답변했을 때 ---
-      if (response.status === 200) {
-        console.log('로그인 성공'); // 콘솔에 성공 메시지 출력
+      console.log('★★★ 서버 응답 받음! status:', response.status);
+      Alert.alert('디버그', `서버 응답 상태: ${response.status}`);
 
-        // 서버가 보내준 사용자 정보를 'userData' 변수에 저장
+      // 서버가 "성공!"이라고 답변했을 때 ---
+      if (response.status === 200) {
+        console.log('★★★ 로그인 성공!'); // 콘솔에 성공 메시지 출력
+
+        // ★★★ 서버 응답 데이터 전체 구조 확인 ★★★
         const userData = response.data;
-        
-        // --- 5. 사용자 정보를 AsyncStorage에 저장하기 ---
-        // AsyncStorage는 문자열만 저장할 수 있으므로, 객체를 JSON 문자열로 변환합니다.
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
-        console.log('사용자 정보 저장 완료:', userData);
+        console.log(
+          '★★★ 서버에서 받은 전체 데이터:',
+          JSON.stringify(userData, null, 2),
+        );
+
+        // ★★★ 응답이 문자열인지 확인 (에러 메시지인 경우) ★★★
+        if (typeof userData === 'string') {
+          console.log('★★★ 서버에서 에러 메시지를 받음:', userData);
+          Alert.alert('로그인 실패', userData);
+          return;
+        }
+
+        // ★★★ 응답이 객체인 경우 (성공) ★★★
+        console.log('★★★ userData.id:', userData.id);
+        console.log('★★★ userData.loginId:', userData.loginId);
+        console.log('★★★ userData.userId:', userData.userId);
+        console.log('★★★ userData.user:', userData.user);
+
+        Alert.alert('디버그', `서버 데이터: ${JSON.stringify(userData)}`);
+
+        // ★★★ 다양한 가능성을 고려한 사용자 정보 저장 ★★★
+        const userInfo = {
+          // 가능한 모든 ID 필드를 저장
+          id: userData.id || userData.loginId || userData.userId || userId, // 입력한 userId라도 저장
+          loginId: userData.loginId || userId,
+          userId: userData.userId || userData.id,
+          name: userData.name || userData.username || '사용자',
+          // 원본 데이터도 함께 저장 (디버깅용)
+          originalData: userData,
+        };
+
+        console.log(
+          '★★★ AsyncStorage에 저장할 userInfo:',
+          JSON.stringify(userInfo, null, 2),
+        );
+
+        // 사용자 정보를 AsyncStorage에 저장하기 ---
+        await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
+        console.log('★★★ 사용자 정보 저장 완료!');
 
         // 로그인 성공 알림 후 메인 화면으로 이동
-        Alert.alert('로그인 성공', `admin님 환영합니다!`);
-        navigation.replace('Main'); // 'Main'은 탭 네비게이터가 있는 화면의 이름
+        Alert.alert('로그인 성공', `${userInfo.name}님 환영합니다!`);
+        navigation.replace('Main');
       }
     } catch (error) {
-      // --- 4. 서버가 "실패!"라고 답변했을 때 ---
-      console.error('로그인 에러:', error);
+      // 서버가 "실패!"라고 답변했을 때 ---
+      console.log('★★★ 로그인 에러 발생!');
+      console.error('★★★ 에러 상세:', error);
+      console.log('★★★ 에러 메시지:', error.message);
+
+      Alert.alert('디버그 - 에러 발생', `에러: ${error.message}`);
       Alert.alert('로그인 실패', '아이디 또는 비밀번호가 일치하지 않습니다.');
     } finally {
       // --- 모든 과정이 끝나면 반드시 실행 ---
+      console.log('★★★ handleLogin 함수 종료!');
       setLoading(false); // "로딩 끝!"으로 상태 변경
     }
   };
-  
+
   return (
     <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="dark-content" />
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
+      <StatusBar barStyle="dark-content" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
         >
-        {/* ScrollView를 추가하여 작은 화면에서도 모든 콘텐츠가 보이도록 합니다. */}
-            <ScrollView
-                contentContainerStyle={styles.container}
-                keyboardShouldPersistTaps="handled"
+          <View>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.navigate('FirstLogin')}
             >
-          {/* 상단 영역: 뒤로가기 버튼과 환영 메시지 */}
-                <View>
-                    <TouchableOpacity
-                      style={styles.backButton}
-                      onPress={() => navigation.navigate('FirstLogin')}
-                    >
-                        <Text style={styles.backButtonText}>{'<'}</Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.titleContainer}>
-                        <Text style={styles.title}>
+              <Text style={styles.backButtonText}>{'<'}</Text>
+            </TouchableOpacity>
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>
                 안녕하세요 :){'\n'}
-                            <Text style={styles.highlight}>타미</Text>입니다.
-                        </Text>
-                        <Text style={styles.subtitle}>저와 함께 낭비없는 스케줄을 만들어봐요!</Text>
-                    </View>
-                </View>
+                <Text style={styles.highlight}>타미</Text>입니다.
+              </Text>
+              <Text style={styles.subtitle}>
+                저와 함께 낭비없는 스케줄을 만들어봐요!
+              </Text>
+            </View>
+          </View>
 
-          {/* 중간 영역: 로그인 폼과 링크 */}
-                <View>
-                    <View style={styles.inputContainer}>
-                        {/* 아이디 입력: 글자가 바뀔 때마다 'userId' 기억 상자의 내용을 업데이트 */}
-                        <TextInput style={styles.input}
-                          placeholder="아이디 입력"
-                          placeholderTextColor="#A5A5A5"
-                          value={userId}
-                          onChangeText={setUserId}
-                          autoCapitalize="none"
-                        />
-                        <TextInput style={styles.input}
-                          placeholder="비밀번호 입력"
-                          placeholderTextColor="#A5A5A5"
-                          secureTextEntry
-                          value={password}
-                          onChangeText={setPassword}
-                        />
+          <View>
+            <View style={styles.inputContainer}>
+              {/* 아이디 입력: 글자가 바뀔 때마다 'userId' 기억 상자의 내용을 업데이트 */}
+              <TextInput
+                style={styles.input}
+                placeholder="아이디 입력"
+                placeholderTextColor="#A5A5A5"
+                value={userId}
+                onChangeText={setUserId}
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="비밀번호 입력"
+                placeholderTextColor="#A5A5A5"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+              {/*로그인 버튼 */}
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" /> // 로딩 아이콘
+                ) : (
+                  <Text style={styles.loginButtonText}>로그인</Text>
+                )}
+              </TouchableOpacity>
+            </View>
 
-                        {/*로그인 버튼 */}
-                        <TouchableOpacity style={styles.loginButton}
-                          onPress={handleLogin}
-                          disabled={loading}
-                        >
-                          {loading ? (
-                            <ActivityIndicator color="#FFFFFF" /> // 로딩 아이콘
-                          ) : (
-                            <Text style={styles.loginButtonText}>로그인</Text>
-                          )}
-                        </TouchableOpacity>
-                    </View>
-                    
-
-                    <View style={styles.linksContainer}>
-                        <TouchableOpacity>
-                            <Text style={styles.linkText}>아이디 찾기</Text>
-                        </TouchableOpacity>
-                        <View style={styles.separator}/>
-                        <TouchableOpacity>
-                            <Text style={styles.linkText}>비밀번호 찾기</Text>
-                        </TouchableOpacity>
-                        <View style={styles.separator}/>
-                        <TouchableOpacity>
-                            <Text style={styles.linkText}>회원가입</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+            <View style={styles.linksContainer}>
+              <TouchableOpacity>
+                <Text style={styles.linkText}>아이디 찾기</Text>
+              </TouchableOpacity>
+              <View style={styles.separator} />
+              <TouchableOpacity>
+                <Text style={styles.linkText}>비밀번호 찾기</Text>
+              </TouchableOpacity>
+              <View style={styles.separator} />
+              <TouchableOpacity>
+                <Text style={styles.linkText}>회원가입</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* 하단 SNS 로그인 영역 */}
-                <View style={styles.socialLoginContainer}>
-                    <View style={styles.dividerContainer}>
-                    <View style={styles.divider} />
-                    <Text style={styles.dividerText}>SNS 계정으로 로그인</Text>
-                    <View style={styles.divider} />
-                </View>
-                <View style={styles.socialLogosContainer}>
-                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
-                        <Image source={kakaoLogo} style={styles.socialLogo} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
-                        <Image source={naverLogo} style={styles.socialLogo} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
-                        <Image source={facebookLogo} style={styles.socialLogo} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
-                        <Image source={googleLogo} style={styles.socialLogo} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialLogoWrapper} onPress={developmentAlert}>
-                        <Image source={appleLogo} style={styles.socialLogo} />
-                    </TouchableOpacity>
-                </View>
+          <View style={styles.socialLoginContainer}>
+            <View style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>SNS 계정으로 로그인</Text>
+              <View style={styles.divider} />
             </View>
+            <View style={styles.socialLogosContainer}>
+              <TouchableOpacity
+                style={styles.socialLogoWrapper}
+                onPress={developmentAlert}
+              >
+                <Image source={kakaoLogo} style={styles.socialLogo} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.socialLogoWrapper}
+                onPress={developmentAlert}
+              >
+                <Image source={naverLogo} style={styles.socialLogo} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.socialLogoWrapper}
+                onPress={developmentAlert}
+              >
+                <Image source={facebookLogo} style={styles.socialLogo} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.socialLogoWrapper}
+                onPress={developmentAlert}
+              >
+                <Image source={googleLogo} style={styles.socialLogo} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.socialLogoWrapper}
+                onPress={developmentAlert}
+              >
+                <Image source={appleLogo} style={styles.socialLogo} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </ScrollView>
-        </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
-    );
+  );
 };
 
 const styles = StyleSheet.create({
@@ -202,7 +296,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    justifyContent: 'space-between', // 콘텐츠를 위, 중간, 아래로 분산
+    justifyContent: 'space-between',
   },
   backButton: {
     marginTop: 10,
@@ -215,7 +309,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#222B45',
   },
-  // '안녕하세요' 문구를 감싸는 컨테이너에 y축 간격(marginTop)을 적용합니다.
   titleContainer: {
     marginTop: 62,
   },
@@ -240,9 +333,8 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
-
   input: {
     height: 62,
     width: 380,
@@ -268,7 +360,7 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: '#FFFFFF',
     fontSize: 22,
-    fontFamily: 'Pretendard-Bold'
+    fontFamily: 'Pretendard-Bold',
   },
   linksContainer: {
     flexDirection: 'row',
@@ -286,7 +378,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
     marginHorizontal: 16,
   },
-  // SNS 로그인 컨테이너에 y축 간격(marginTop)을 적용합니다.
   socialLoginContainer: {
     marginTop: 170,
     paddingBottom: 30,
@@ -318,7 +409,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // 모든 로고가 동일한 스타일을 사용하도록 통일합니다.
   socialLogo: {
     width: '100%',
     height: '100%',
